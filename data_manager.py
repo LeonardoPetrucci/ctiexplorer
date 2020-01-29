@@ -9,7 +9,7 @@ def fetch_techniques(attack_pattern_id, attack_technique_collection):
         techniques.append(technique)
     return techniques
 
-def partner(attack_entity_id, attack_relationships, collection_type):
+def fetch_partner(attack_entity_id, attack_relationships, collection_type):
     partners = []
     for entity in attack_relationships.find({'$or': [{'target_ref': attack_entity_id}, {'source_ref': attack_entity_id}]}):
         target = entity['target_ref']
@@ -39,4 +39,3 @@ def fetch_capec(cve_id, cwe_list, capec_db):
                 break
     return capec_list
 
-    
