@@ -10,7 +10,7 @@ from taxii2client import Server, Collection
 from pymongo import MongoClient
 import sys
 
-FEEDS = ["CVE", "CWE", "CAPEC", "ATTACK"]
+FEEDS = ["CVE", "CWE", "CAPEC", "ATTACK", "MISP"]
 
 MITRE_STIX = "https://cti-taxii.mitre.org/stix/collections/"
 MITRE_TAXII = Server("https://cti-taxii.mitre.org/taxii/")
@@ -22,7 +22,11 @@ NVD_REGEX = 'nvdcve-1.1-[0-9]*\.json\.zip'
 NVD = 'https://nvd.nist.gov/feeds/json/cve/1.1/'
 CWE = 'https://cwe.mitre.org/data/xml/views/'
 CAPEC = 'https://capec.mitre.org/data/xml/views/'
+
 CIRCL_API = 'https://cve.circl.lu/api/'
+
+MISP_GALAXY = 'https://raw.githubusercontent.com/MISP/misp-galaxy/master/clusters/'
+MISP_THREAT_ACTOR = 'threat-actor.json'
 
 def get_NVD_names():
     nvd = requests.get(NVD_FEED)
@@ -40,7 +44,7 @@ current_directory = os.path.dirname(__file__)
 NVD_PATH = os.path.join(current_directory, "NVD/")
 CWE_PATH = os.path.join(current_directory, "CWE/")
 CAPEC_PATH = os.path.join(current_directory, "CAPEC/")
-
+MISP_PATH = os.path.join(current_directory, "MISP/")
 
 def download_file(url, path, filename):
     file_stream = requests.get(url + filename, stream = True)
@@ -70,6 +74,12 @@ def download_all():
         if not os.path.isfile(os.path.join(CAPEC_PATH, filename)):
             download_file(CAPEC, CAPEC_PATH, filename)
 
+    if not os.path.exists(MISP_PATH):
+        os.makedirs(MISP_PATH)
+
+    if not os.path.isfile(os.path.join(MISP_PATH, MISP_THREAT_ACTOR)):
+        download_file(MISP_GALAXY, MISP_PATH, MISP_THREAT_ACTOR)
+
 def cti_create(collection, client):
     cti = client['cti']
 
@@ -82,6 +92,7 @@ def cti_create(collection, client):
     attack_malware = cti['attack_malware']
     attack_tools = cti['attack_tools']
     attack_mitigations = cti['attack_mitigations']
+    misp_threat_actor = cti['misp_threat_actor']
 
     try:
         if collection == "CVE":
@@ -179,6 +190,14 @@ def cti_create(collection, client):
                 attack_mitigations.insert_one(dict(entity))
 
             return
+        
+        elif collection == "MISP":
+            with open(os.path.join(MISP_PATH, MISP_THREAT_ACTOR), 'r', encoding="UTF-8") as misp_file:
+                threat_actors = json.loads(misp_file.read())
+                for threat_actor in threat_actors['values']:
+                    misp_threat_actor.insert_one(dict(threat_actor))
+                misp_file.close()
+        
         else:
             print("Collection type not set")
             return
@@ -186,7 +205,6 @@ def cti_create(collection, client):
         print("OOPS! An error occured. Wiping CTI database...")
         client.drop_database('cti')
         sys.exit("CTI database has been dropped, please create a new instance.")
-
 
 download_all()
 
