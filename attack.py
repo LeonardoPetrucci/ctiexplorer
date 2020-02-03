@@ -1,4 +1,5 @@
 from mongocti import *
+from paths import GROUP_URL
 
 def capec(attack_technique):
     try:
@@ -60,8 +61,18 @@ def kill_chain_phases(attack_technique):
         return []
 
 def misp_threat_actor(attack_group):
+    stix_id = attack_group.split("--")[1]
+    attack_id = groups_db.distinct('external_references.external_id', {'external_references.source_name':'mitre-attack', 'id':attack_group})[0]
+    threat_actors = []
+
     try:
-        return techniques_db.distict('x_mitre_platforms', {'id':attack_technique})
+        misp_list = threat_actors_db.distinct('uuid', {"meta.refs": GROUP_URL(attack_id)}) + threat_actors_db.distinct('uuid', {"related.dest-uuid": stix_id})
+        for element in misp_list:
+            if element not in threat_actors:
+                threat_actors.append(element)
+        
+        return threat_actors
     except:
         return []
 
+print(misp_threat_actor("intrusion-set--6a2e693f-24e5-451a-9f88-b36a108e5662"))

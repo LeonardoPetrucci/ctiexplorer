@@ -1,4 +1,8 @@
 import os
+import requests
+import re
+
+from taxii2client import Server
 
 FEEDS = ["CVE", "CWE", "CAPEC", "ATTACK", "MISP"]
 
@@ -34,3 +38,6 @@ NVD_PATH = os.path.join(current_directory, "NVD/")
 CWE_PATH = os.path.join(current_directory, "CWE/")
 CAPEC_PATH = os.path.join(current_directory, "CAPEC/")
 MISP_PATH = os.path.join(current_directory, "MISP/")
+
+def GROUP_URL(attack_group):
+    return "https://attack.mitre.org/groups/" + attack_group + "/"
