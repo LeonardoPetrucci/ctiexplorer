@@ -5,6 +5,7 @@ import zipfile
 import json
 import xmltodict
 import sys
+import datetime
 
 from paths import *
 from collections import OrderedDict
@@ -12,7 +13,7 @@ from stix2 import TAXIICollectionSource, Filter, AttackPattern, parse
 from taxii2client import Server, Collection
 from pymongo import MongoClient
 
-__all__ = ['cve_db', 'cwe_db', 'capec_db', 'techniques_db', 'relationships_db', 'groups_db', 'malware_db', 'tools_db', 'mitigations_db', 'threat_actors_db']
+__all__ = ['cve_db', 'cwe_db', 'capec_db', 'techniques_db', 'relationships_db', 'groups_db', 'software_db', 'mitigations_db', 'threat_actors_db']
 
 
 def download_file(url, path, filename):
@@ -58,8 +59,7 @@ def cti_create(collection, client):
     attack_techniques = cti['attack_techniques']
     attack_relationships = cti['attack_relationships']
     attack_groups = cti['attack_groups']
-    attack_malware = cti['attack_malware']
-    attack_tools = cti['attack_tools']
+    attack_software = cti['attack_software']
     attack_mitigations = cti['attack_mitigations']
     misp_threat_actor = cti['misp_threat_actor']
 
@@ -150,10 +150,10 @@ def cti_create(collection, client):
                 attack_groups.insert_one(dict(entity))
 
             for entity in attack["malware"]:
-                attack_malware.insert_one(dict(entity))
+                attack_software.insert_one(dict(entity))
 
             for entity in attack["tools"]:
-                attack_tools.insert_one(dict(entity))
+                attack_software.insert_one(dict(entity))
 
             for entity in attack["mitigations"]:
                 attack_mitigations.insert_one(dict(entity))
@@ -195,8 +195,7 @@ capec_db = cti['capec']
 techniques_db = cti['attack_techniques']
 relationships_db = cti['attack_relationships']
 groups_db = cti['attack_groups']
-malware_db = cti['attack_malware']
-tools_db = cti['attack_tools']
+software_db = cti['attack_software']
 mitigations_db = cti['attack_mitigations']
 threat_actors_db = cti['misp_threat_actor']
 
