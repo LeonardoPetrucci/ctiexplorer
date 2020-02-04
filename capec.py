@@ -10,12 +10,11 @@ def cwe(capec):
 def attack_technique(capec):
     try:
         attack_technique_list = []
-        taxonomies = capec_db.distinct("Taxonomy_Mappings.Taxonomy_Mapping", {"ID":capec})
-
+        taxonomies = capec_db.distinct("Taxonomy_Mappings.Taxonomy_Mapping", {"ID": capec})
         for taxonomy in taxonomies:
             if "ATTACK" in taxonomy["Taxonomy_Name"]:
                 attack_id = "T" + taxonomy["Entry_ID"]
-                attack_technique_list += techniques_db.distict("id", {"Taxonomy_Mappings.Taxonomy_Mapping.Entry_ID": attack_id})
+                attack_technique_list += techniques_db.distinct("id", {"external_references.external_id": attack_id})
 
         return attack_technique_list
 

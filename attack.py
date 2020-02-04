@@ -33,7 +33,7 @@ def relationship_with(attack_entity, entity_type=None):
 def capec(attack_technique):
     try:
         capec_list = []
-        references = techniques_db.distinct("external_references.external_id", {"id":attack_technique})
+        references = techniques_db.distinct("external_references", {"id":attack_technique})
         
         for reference in references:
             if reference['source_name'] == 'capec':

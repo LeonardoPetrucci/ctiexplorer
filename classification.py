@@ -18,7 +18,6 @@ def software_properties(software):
     target = []
     sponsor = []
 
-    resources = []
     skills = []
     
     platforms = attack.software_platforms(software)
@@ -27,9 +26,7 @@ def software_properties(software):
     capec_list = []
     for technique in techniques:
         capec_list += attack.capec(technique)
-
     for capec_id in capec_list:
-        resources += capec.resources(capec_id)
         skills += capec.skill(capec_id)
 
     groups = attack.relationship_with(software, "intrusion-set")
@@ -48,7 +45,6 @@ def software_properties(software):
     properties['target'] = target
     properties['sponsor'] = sponsor
 
-    properties['resources'] = resources
     properties['skills'] = skills
     
     properties['platforms'] = platforms
@@ -65,9 +61,20 @@ def software_pool_profile(software_pool):
                 profile[key] = properies[key]
             else:
                 profile[key] += properies[key]
-
+    
     for key in profile.keys():
         profile[key] = list_count(profile[key])
-
+    
     return profile
 
+
+def fetch_groups(techniques):
+    compatible_groups = []
+    groups = groups_db.distinct("id", {})
+    
+    for group in groups:
+        group_techniques = attack.relationship_with(group, "attack-pattern")
+        if all(elem in techniques  for elem in group_techniques):
+            compatible_groups.append(group)
+    
+    return compatible_groups

@@ -1,6 +1,5 @@
 import json
 import requests
-
 from mongocti import *
 from paths import CIRCL_API
 
@@ -15,6 +14,7 @@ def capec(cve):
     capec_list = []
     
     attack_patterns = json.loads(requests.get(CIRCL_API + "cve/" + cve).text)['capec']
+
     for attack_pattern in attack_patterns:
         capec_id = attack_pattern['id']
         capec_list.append(capec_id)
