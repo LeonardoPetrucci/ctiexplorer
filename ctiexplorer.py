@@ -75,31 +75,29 @@ def cti_graph(cve_list, capec_list, preliminary_technique_list, software_list, f
 
 def generate_attacker(cve_list):
     cve_list = list(dict.fromkeys(cve_list))
-    print(len(cve_list))
 
     capec_list = []
     for cve_id in cve_list:
         capec_list += cve.capec(cve_id)
     capec_list = list(dict.fromkeys(capec_list))
-    print(len(capec_list))
     
     preliminary_technique_list = []
     for capec_id in capec_list:
         preliminary_technique_list += capec.attack_technique(capec_id)
     preliminary_technique_list = list(dict.fromkeys(preliminary_technique_list))
-    print(len(preliminary_technique_list))
+
     software_list = []
     for technique in preliminary_technique_list:
         software_list += attack.relationship_with(technique, "software")
     software_list = list(dict.fromkeys(software_list))
-    print(len(software_list))
+
     profile = software_pool_profile(software_list)
 
     full_technique_list = []
     for software in software_list:
         full_technique_list += attack.relationship_with(software, "attack-pattern")
     full_technique_list = list(dict.fromkeys(full_technique_list))
-    print(len(full_technique_list))
+
     cti_graph(cve_list, capec_list, preliminary_technique_list, software_list, full_technique_list)
 
     return profile, full_technique_list
@@ -112,32 +110,18 @@ if __name__ == "__main__":
         sys.exit(0)
     
     cve_list = sys.argv[1:]
-    '''
-    print('\n-------------------------------CVE-------------------------------')
-    for cve_id in cve_list:
-        print(cve_id)
-    '''
+    
     profile, technique_list = generate_attacker(cve_list)
 
-    '''
+    
     print('\n-------------------ATTACKER POSSIBILE TECHNIQUES-----------------')
     if len(technique_list) < 1:
         print("No techniques found in ATT&CK database.\n")
         sys.exit(0)
 
     else:
-        print(len(technique_list))
-
-        print('\n-----------------------ATTACKER PROFILE--------------------------')
-        #print(json.dumps(profile, indent=4))
-
-        print('\n------------------------ATTACKER IDENTIFICATION------------------')
-        compatible_groups = fetch_groups(technique_list)
-        if len(compatible_groups) > 1:
-                print(len(compatible_groups))
-        else:
-            print("No groups found in ATT&CK Database for this technique pool.\n")
-    '''
+        print(json.dumps(profile, indent=4))
+    
     print()
     sys.exit(0)
 
