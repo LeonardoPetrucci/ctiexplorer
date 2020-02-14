@@ -30,6 +30,29 @@ def relationship_with(attack_entity, entity_type=None):
     except:
         return []
 
+def attack_id(attack_entity):
+    attack_db = None
+    if "attack-pattern" in attack_entity:
+        attack_db = techniques_db
+    elif "intrusion-set" in attack_entity:
+        attack_db = groups_db
+    elif "course-of-action" in attack_entity:
+        attack_db = mitigations_db
+    elif "tool" in attack_entity or "malware" in attack_entity:
+        attack_db = software_db
+    try:
+        for external_reference in attack_db.distinct('external_references', {'external_references.source_name':'mitre-attack', 'id':attack_entity}):
+            if external_reference['source_name'] == 'mitre-attack':
+                return external_reference['external_id']
+        for external_reference in attack_db.distinct('external_references', {'external_references.source_name':'mitre-pre-attack', 'id':attack_entity}):
+            if external_reference['source_name'] == 'mitre-pre-attack':
+                return external_reference['external_id']
+        for external_reference in attack_db.distinct('external_references', {'external_references.source_name':'mitre-mobile-attack', 'id':attack_entity}):
+            if external_reference['source_name'] == 'mitre-mobile-attack':
+                return external_reference['external_id']
+    except:
+        return attack_entity
+
 def capec(attack_technique):
     try:
         capec_list = []
