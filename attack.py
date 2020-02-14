@@ -41,15 +41,11 @@ def attack_id(attack_entity):
     elif "tool" in attack_entity or "malware" in attack_entity:
         attack_db = software_db
     try:
-        for external_reference in attack_db.distinct('external_references', {'external_references.source_name':'mitre-attack', 'id':attack_entity}):
-            if external_reference['source_name'] == 'mitre-attack':
+        for external_reference in attack_db.distinct('external_references', {"external_references.source_name": {'$regex': '^.*-attack.*$'}, 'id':attack_entity}):
+            if '-attack' in external_reference['source_name']:
                 return external_reference['external_id']
-        for external_reference in attack_db.distinct('external_references', {'external_references.source_name':'mitre-pre-attack', 'id':attack_entity}):
-            if external_reference['source_name'] == 'mitre-pre-attack':
-                return external_reference['external_id']
-        for external_reference in attack_db.distinct('external_references', {'external_references.source_name':'mitre-mobile-attack', 'id':attack_entity}):
-            if external_reference['source_name'] == 'mitre-mobile-attack':
-                return external_reference['external_id']
+        return attack_entity
+
     except:
         return attack_entity
 
@@ -82,6 +78,12 @@ def software_platforms(attack_software):
 def permissions(attack_technique):
     try:
         return techniques_db.distinct('x_mitre_permissions_required', {'id':attack_technique})
+    except:
+        return []
+
+def description(attack_technique):
+    try:
+        return techniques_db.distinct('description', {'id':attack_technique})
     except:
         return []
 

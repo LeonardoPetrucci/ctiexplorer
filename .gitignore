@@ -3,4 +3,5 @@ CWE/*
 CAPEC/*
 MISP/*
 __pycache__
+techniques_hash.db
 
