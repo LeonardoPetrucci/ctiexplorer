@@ -89,9 +89,9 @@ def run_techniques(technique_list):
     if execute_flag == 'y':
         techniques = runner.AtomicRunner()
         while(True):
+            print(help)
             mode = input("Select the execution mode number, or type h for a list of execution options: ")
             help = "Mode of operations:\n1- manual: execute all tecnhiques found in manual mode. Command and options will be shown\n2- all-automatic: execute automatically all the techniques found with default paramenters.\n3- single-manual: execute a single technique in manual mode\n4- automatic-manual: execute a single technique in automatic mode\n"
-            print(help)
             if mode == 'h':
                 print("Mode of operations:\n1- all-manual: execute all tecnhiques found in manual mode. Command and options will be shown\n2- all-automatic: execute automatically all the techniques found with default paramenters.\n3- single-manual: execute a single technique in manual mode\n4- automatic-manual: execute a single technique in automatic mode\n")
             elif mode == '1' or mode == '2':
@@ -113,10 +113,10 @@ def run_techniques(technique_list):
                     if select == 'exit':
                         return
                     elif select == 'list':
-                        for technique in techniques:
-                            print(attack.attack_id(technique) + " - " + attack.description(technique))
+                        for technique in technique_list:
+                            print(attack.attack_id(technique) + " - " + attack.name(technique)[0])
                     else:
-                        if select in technique_list:
+                        if attack.stix_id(select) in technique_list:
                             technique = select
                             if mode == '1':
                                 try:
@@ -133,6 +133,7 @@ def run_techniques(technique_list):
             else:
                 print("Invalid option.\n")
     return
+
 
 def generate_scenario(cve_list):
     scenario = {}
@@ -153,8 +154,6 @@ def generate_scenario(cve_list):
     for technique in preliminary_technique_list:
         software_list += attack.relationship_with(technique, "software")
     software_list = list(dict.fromkeys(software_list))
-
-    
 
     full_technique_list = []
     for software in software_list:

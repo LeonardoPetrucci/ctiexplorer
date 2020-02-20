@@ -49,6 +49,31 @@ def attack_id(attack_entity):
     except:
         return attack_entity
 
+def stix_id(attack_entity):
+    category = attack_entity[0]
+    if category == 'T':
+        try:
+            return techniques_db.distinct('id', {'external_references.external_id':attack_entity})[0]
+        except:
+            return attack_entity
+    elif category == 'S':
+        try:
+            return software_db.distinct('id', {'external_references.external_id':attack_entity})[0]
+        except:
+            return attack_entity
+    elif category == 'G':
+        try:
+            return groups_db.distinct('id', {'external_references.external_id':attack_entity})[0]
+        except:
+            return attack_entity    
+    elif category == 'M':
+        try:
+            return mitigations_db.distinct('id', {'external_references.external_id':attack_entity})[0]
+        except:
+            return attack_entity
+    else:
+        return attack_entity
+
 def capec(attack_technique):
     try:
         capec_list = []
@@ -86,6 +111,12 @@ def description(attack_technique):
         return techniques_db.distinct('description', {'id':attack_technique})
     except:
         return []
+
+def name(attack_technique):
+    try:
+        return techniques_db.distinct('name', {'id':attack_technique})
+    except:
+        return []        
 
 def data_sources(attack_technique):
     try:
