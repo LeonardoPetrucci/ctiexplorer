@@ -63,129 +63,160 @@ def cti_create(collection, client):
     attack_mitigations = cti['attack_mitigations']
     misp_threat_actor = cti['misp_threat_actor']
 
-    try:
-        if collection == "CVE":
-            files = [f for f in os.listdir(NVD_PATH) if os.path.isfile(os.path.join(NVD_PATH, f))]
-            files.sort()
-            for file in files:
-                archive = zipfile.ZipFile(os.path.join(NVD_PATH, file), 'r')
-                jsonfile = archive.open(archive.namelist()[0])
-                nvd_dict = json.loads(jsonfile.read())
-                for element in nvd_dict['CVE_Items']:
-                    cve.insert_one(element)
-                jsonfile.close()
-            return
+    if collection == "CVE":
+        files = [f for f in os.listdir(NVD_PATH) if os.path.isfile(os.path.join(NVD_PATH, f))]
+        files.sort()
+        for file in files:
+            archive = zipfile.ZipFile(os.path.join(NVD_PATH, file), 'r')
+            jsonfile = archive.open(archive.namelist()[0])
+            nvd_dict = json.loads(jsonfile.read())
+            for element in nvd_dict['CVE_Items']:
+                cve.insert_one(element)
+            jsonfile.close()
+        return
 
-        elif collection == "CWE":
-            files = [f for f in os.listdir(CWE_PATH) if os.path.isfile(os.path.join(CWE_PATH, f))]
-            files.sort()
-            for file in files:
-                archive = zipfile.ZipFile(os.path.join(CWE_PATH, file), 'r')
-                jsonfile = archive.open(archive.namelist()[0])
-                cwe_dict = xmltodict.parse(jsonfile.read())
-                cwe_list = cwe_dict['Weakness_Catalog']['Weaknesses']['Weakness']
-                for element in cwe_list:
-                    cwe.insert_one(json.loads(json.dumps(element).replace("@", "")))
-                jsonfile.close()
-            return
+    elif collection == "CWE":
+        files = [f for f in os.listdir(CWE_PATH) if os.path.isfile(os.path.join(CWE_PATH, f))]
+        files.sort()
+        for file in files:
+            archive = zipfile.ZipFile(os.path.join(CWE_PATH, file), 'r')
+            jsonfile = archive.open(archive.namelist()[0])
+            cwe_dict = xmltodict.parse(jsonfile.read())
+            cwe_list = cwe_dict['Weakness_Catalog']['Weaknesses']['Weakness']
+            for element in cwe_list:
+                cwe.insert_one(json.loads(json.dumps(element).replace("@", "")))
+            jsonfile.close()
+        return
 
-        elif collection == "CAPEC":
-            files = [f for f in os.listdir(CAPEC_PATH) if os.path.isfile(os.path.join(CAPEC_PATH, f))]
-            files.sort()
-            for file in files:
-                archive = zipfile.ZipFile(os.path.join(CAPEC_PATH, file), 'r')
-                jsonfile = archive.open(archive.namelist()[0])
-                capec_dict = xmltodict.parse(jsonfile.read())
-                capec_list = capec_dict['Attack_Pattern_Catalog']['Attack_Patterns']['Attack_Pattern']
-                for element in capec_list:
-                    capec.insert_one(json.loads(json.dumps(element).replace("@", "")))
-                jsonfile.close()
-            return
+    elif collection == "CAPEC":
+        files = [f for f in os.listdir(CAPEC_PATH) if os.path.isfile(os.path.join(CAPEC_PATH, f))]
+        files.sort()
+        for file in files:
+            archive = zipfile.ZipFile(os.path.join(CAPEC_PATH, file), 'r')
+            jsonfile = archive.open(archive.namelist()[0])
+            capec_dict = xmltodict.parse(jsonfile.read())
+            capec_list = capec_dict['Attack_Pattern_Catalog']['Attack_Patterns']['Attack_Pattern']
+            for element in capec_list:
+                capec.insert_one(json.loads(json.dumps(element).replace("@", "")))
+            jsonfile.close()
+        return
 
-        elif collection == "ATTACK":
+    elif collection == "ATTACK":
+        attack_id = {}
+        for collection in API_ROOT.collections:
+            attack_id[collection.title] = collection.id
 
-            attack_id = {}
-            for collection in API_ROOT.collections:
-                attack_id[collection.title] = collection.id
+        attack = {}
+        enterprise_attack = Collection(MITRE_STIX + attack_id["Enterprise ATT&CK"])
+        pre_attack = Collection(MITRE_STIX + attack_id["PRE-ATT&CK"])
 
-            attack = {}
-            enterprise_attack = Collection(MITRE_STIX + attack_id["Enterprise ATT&CK"])
-            pre_attack = Collection(MITRE_STIX + attack_id["PRE-ATT&CK"])
-            mobile_attack = Collection(MITRE_STIX + attack_id["Mobile ATT&CK"])
+        enterprise_attack_source = TAXIICollectionSource(enterprise_attack)
+        pre_attack_source = TAXIICollectionSource(pre_attack)
 
-            enterprise_attack_source = TAXIICollectionSource(enterprise_attack)
-            pre_attack_source = TAXIICollectionSource(pre_attack)
-            mobile_attack_source = TAXIICollectionSource(mobile_attack)
+        teacher = dict((requests.get(ATTACK_TEACHER).json()))
+        teacher_dict = {}
+        for technique in teacher['techniques']:
+            if technique["color"] == RED:
+                teacher_dict[technique["techniqueID"]] = 'Hard'
+            elif technique["color"] == ORANGE:
+                teacher_dict[technique["techniqueID"]] = 'Cost Prohibitive'
+            elif technique["color"] == YELLOW:
+                teacher_dict[technique["techniqueID"]] = 'Additional Steps Required'
+            elif technique["color"] == GREEN:
+                teacher_dict[technique["techniqueID"]] = 'Exploitable To Anyone'
+            elif technique["color"] == BLUE:
+                teacher_dict[technique["techniqueID"]] = 'Techniques Only'
+            else:
+                teacher_dict[technique["techniqueID"]] = 'Unknown'
 
-            filter_objs = {"techniques": Filter("type", "=", "attack-pattern"),
-                "mitigations": Filter("type", "=", "course-of-action"),
-                "groups": Filter("type", "=", "intrusion-set"),
-                "malware": Filter("type", "=", "malware"),
-                "tools": Filter("type", "=", "tool"),
-                "relationships": Filter("type", "=", "relationship")
-            }
+        filter_objs = {"techniques": Filter("type", "=", "attack-pattern"),
+            "mitigations": Filter("type", "=", "course-of-action"),
+            "groups": Filter("type", "=", "intrusion-set"),
+            "malware": Filter("type", "=", "malware"),
+            "tools": Filter("type", "=", "tool"),
+            "relationships": Filter("type", "=", "relationship")
+        }
 
-            for key in filter_objs:
-                attack[key] = []
-                try:
-                    attack[key] += enterprise_attack_source.query(filter_objs[key])
-                except:
-                    pass
-                try:
-                    attack[key] += pre_attack_source.query(filter_objs[key])
-                except:
-                    pass
-                try:
-                    attack[key] += mobile_attack_source.query(filter_objs[key])
-                except:
-                    pass
+        for key in filter_objs:
+            attack[key] = []
+            try:
+                attack[key] += enterprise_attack_source.query(filter_objs[key])
+            except:
+                pass
+            try:
+                attack[key] += pre_attack_source.query(filter_objs[key])
+            except:
+                pass
 
-            for entity in attack["relationships"]:
-                attack_relationships.insert_one(dict(entity))
+        for entity in attack["relationships"]:
+            attack_relationships.insert_one(dict(entity))
 
-            for entity in attack["techniques"]:
-                attack_techniques.insert_one(dict(entity))
+        for entity in attack["techniques"]:
+            dict_entity = dict(entity)
+            for references in dict_entity['external_references']:
+                if 'attack' in references['source_name']:
+                    attack_id = references['external_id']
+                    if attack_id in teacher_dict.keys():
+                        dict_entity['level'] = teacher_dict[attack_id]
+                    else:
+                        dict_entity['level'] = 'Unknown'
+                    attack_techniques.insert_one(dict_entity)
+            
 
-            for entity in attack["groups"]:
-                attack_groups.insert_one(dict(entity))
+        for entity in attack["groups"]:
+            attack_groups.insert_one(dict(entity))
 
-            for entity in attack["malware"]:
-                attack_software.insert_one(dict(entity))
+        for entity in attack["malware"]:
+            attack_software.insert_one(dict(entity))
 
-            for entity in attack["tools"]:
-                attack_software.insert_one(dict(entity))
+        for entity in attack["tools"]:
+            attack_software.insert_one(dict(entity))
 
-            for entity in attack["mitigations"]:
-                attack_mitigations.insert_one(dict(entity))
+        for entity in attack["mitigations"]:
+            attack_mitigations.insert_one(dict(entity))
 
-            return
+        return
         
-        elif collection == "MISP":
-            with open(os.path.join(MISP_PATH, MISP_THREAT_ACTOR), 'r', encoding="UTF-8") as misp_file:
-                threat_actors = json.loads(misp_file.read())
-                for threat_actor in threat_actors['values']:
-                    misp_threat_actor.insert_one(dict(threat_actor))
-                misp_file.close()
-        
-        else:
-            print("Collection type not set")
-            return
-    except:
-        print("OOPS! An error occured. Wiping CTI database...")
-        client.drop_database('cti')
-        sys.exit("CTI database has been dropped, please create a new instance.")
+    elif collection == "MISP":
+        with open(os.path.join(MISP_PATH, MISP_THREAT_ACTOR), 'r', encoding="UTF-8") as misp_file:
+            threat_actors = json.loads(misp_file.read())
+            for threat_actor in threat_actors['values']:
+                misp_threat_actor.insert_one(dict(threat_actor))
+            misp_file.close()
+    
+    else:
+        print("Collection type not set")
+        return
 
-download_all()
 
 try:
     cti_client = MongoClient('localhost', 27017)
 except:
     sys.exit("Cannot connect to MongoDB.")
 
+
 if "cti" not in cti_client.list_database_names():
-    print("No CTI Database instance found. Creating...")
+    print("No CTI Database instance found.")
+    print('Creating CTI Database instance...')
+    download_all()
     for feed in FEEDS:
         cti_create(feed, cti_client)
+
+elif sys.argv[1] == '-U' or sys.argv[1] == '--update':
+    print('Updating CTI Database instance...')
+    remove_feeds()
+    cti_client.drop_database('cti')
+    download_all()
+    for feed in FEEDS:
+        cti_create(feed, cti_client)
+
+elif sys.argv[1] == '-W' or sys.argv[1] == '--wipe':
+    print('Wiping CTI Database instance...')
+    remove_feeds()
+    cti_client.drop_database('cti')
+    print("Done.\n")
+    sys.exit(0)
+
 
 cti = cti_client['cti']
 
@@ -199,3 +230,4 @@ software_db = cti['attack_software']
 mitigations_db = cti['attack_mitigations']
 threat_actors_db = cti['misp_threat_actor']
 
+print("CTI Database instance ready.\n")
