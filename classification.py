@@ -1,80 +1,23 @@
-from mongocti import *
-import attack
-import json
-import misp_threat_actor
-import capec
-
 def list_count(array):
     count_list = {}
     for element in array:
         count_list[element] = array.count(element)
     return count_list
 
-def software_properties(software):
-    properties = {}
+#STUB: This classification metrics MUST be improved
+def threat_actor_category(threat_actor):
+    if 'meta' in threat_actor.keys():
+        if 'cfr-suspected-state-sponsor' in threat_actor['meta'].keys():
+            threat_actor['category'] = 'State-Sponsored'
+            threat_actor['motive'] = '9'
+            threat_actor['size'] = '2'
+        else:
+            threat_actor['category'] = 'Cyber Criminal'
+            threat_actor['motive'] = '4'
+            threat_actor['size'] = '6'
 
-    nation = []
-    goal = []
-    target = []
-    sponsor = []
-
-    skills = []
+    if 'category' not in threat_actor.keys():
+        threat_actor['category'] = 'Unknown'
     
-    platforms = attack.software_platforms(software)
+    return threat_actor
 
-    techniques = attack.relationship_with(software, "attack-pattern")
-    capec_list = []
-    for technique in techniques:
-        capec_list += attack.capec(technique)
-    for capec_id in capec_list:
-        skills += capec.skill(capec_id)
-
-    groups = attack.relationship_with(software, "intrusion-set")
-    threat_actors = []
-    for group in groups:
-        threat_actors += attack.misp_threat_actor(group)
-
-    for threat_actor in threat_actors:
-        nation += misp_threat_actor.country(threat_actor)
-        goal += misp_threat_actor.type_of_incident(threat_actor)
-        target += misp_threat_actor.target_category(threat_actor)
-        sponsor += misp_threat_actor.suspected_state_sponsor(threat_actor)
-
-    properties['nation'] = nation
-    properties['goal'] = goal
-    properties['target'] = target
-    properties['sponsor'] = sponsor
-
-    properties['skills'] = skills
-    
-    properties['platforms'] = platforms
-
-    return properties
-
-def software_pool_profile(software_pool):
-    profile = {}
-    
-    for software in software_pool:
-        properies = software_properties(software)
-        for key in properies.keys():
-            if key not in profile.keys():
-                profile[key] = properies[key]
-            else:
-                profile[key] += properies[key]
-    
-    for key in profile.keys():
-        profile[key] = list_count(profile[key])
-    
-    return profile
-
-
-def fetch_groups(techniques):
-    compatible_groups = []
-    groups = groups_db.distinct("id", {})
-    
-    for group in groups:
-        group_techniques = attack.relationship_with(group, "attack-pattern")
-        if all(elem in techniques  for elem in group_techniques):
-            compatible_groups.append(group)
-    
-    return compatible_groups

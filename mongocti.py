@@ -13,6 +13,10 @@ from stix2 import TAXIICollectionSource, Filter, AttackPattern, parse
 from taxii2client import Server, Collection
 from pymongo import MongoClient
 
+from classification import threat_actor_category
+
+OWASP = float(9/5)
+
 __all__ = ['cve_db', 'cwe_db', 'capec_db', 'techniques_db', 'relationships_db', 'groups_db', 'software_db', 'mitigations_db', 'threat_actors_db']
 
 
@@ -102,11 +106,14 @@ def cti_create(collection, client):
         return
 
     elif collection == "ATTACK":
+        technique_helper = []
+        software_helper = []
+
         attack_id = {}
         for collection in API_ROOT.collections:
             attack_id[collection.title] = collection.id
 
-        attack = {}
+        attack_collection = {}
         enterprise_attack = Collection(MITRE_STIX + attack_id["Enterprise ATT&CK"])
         pre_attack = Collection(MITRE_STIX + attack_id["PRE-ATT&CK"])
 
@@ -117,15 +124,15 @@ def cti_create(collection, client):
         teacher_dict = {}
         for technique in teacher['techniques']:
             if technique["color"] == RED:
-                teacher_dict[technique["techniqueID"]] = 'Hard'
+                teacher_dict[technique["techniqueID"]] = '5'
             elif technique["color"] == ORANGE:
-                teacher_dict[technique["techniqueID"]] = 'Cost Prohibitive'
+                teacher_dict[technique["techniqueID"]] = '4'
             elif technique["color"] == YELLOW:
-                teacher_dict[technique["techniqueID"]] = 'Additional Steps Required'
+                teacher_dict[technique["techniqueID"]] = '3'
             elif technique["color"] == GREEN:
-                teacher_dict[technique["techniqueID"]] = 'Exploitable To Anyone'
+                teacher_dict[technique["techniqueID"]] = '2'
             elif technique["color"] == BLUE:
-                teacher_dict[technique["techniqueID"]] = 'Techniques Only'
+                teacher_dict[technique["techniqueID"]] = '1'
             else:
                 teacher_dict[technique["techniqueID"]] = 'Unknown'
 
@@ -138,20 +145,20 @@ def cti_create(collection, client):
         }
 
         for key in filter_objs:
-            attack[key] = []
+            attack_collection[key] = []
             try:
-                attack[key] += enterprise_attack_source.query(filter_objs[key])
+                attack_collection[key] += enterprise_attack_source.query(filter_objs[key])
             except:
                 pass
             try:
-                attack[key] += pre_attack_source.query(filter_objs[key])
+                attack_collection[key] += pre_attack_source.query(filter_objs[key])
             except:
                 pass
 
-        for entity in attack["relationships"]:
+        for entity in attack_collection["relationships"]:
             attack_relationships.insert_one(dict(entity))
 
-        for entity in attack["techniques"]:
+        for entity in attack_collection["techniques"]:
             dict_entity = dict(entity)
             for references in dict_entity['external_references']:
                 if 'attack' in references['source_name']:
@@ -160,28 +167,198 @@ def cti_create(collection, client):
                         dict_entity['level'] = teacher_dict[attack_id]
                     else:
                         dict_entity['level'] = 'Unknown'
+                    technique_helper.append(dict_entity)
                     attack_techniques.insert_one(dict_entity)
+
+
+        for entity in attack_collection["malware"]:
+            dict_entity = dict(entity)
+            sw_id = dict_entity['id']
+            
+            techniques = []
+            measured_techniques = 0
+            ttp_score_sum = 0
+
+            for relationship in attack_collection["relationships"]:
+                dict_rel = dict(relationship)
+
+                if dict_rel['source_ref'] == sw_id:
+                    if 'attack-pattern' in dict_rel['target_ref']:
+                        techniques.append(dict_rel['target_ref'])
+
+                elif dict_rel['target_ref'] == sw_id:
+                    if 'attack-pattern' in dict_rel['source_ref']:
+                        techniques.append(dict_rel['source_ref'])
+
+            for ttp_id in techniques:
+                for technique in technique_helper:
+                    if technique['id'] == ttp_id and technique['level'] != "Unknown":
+                        measured_techniques += 1
+                        ttp_score_sum += int(technique['level'])
+
+            if measured_techniques == 0:
+                dict_entity['score'] = 'Unknown'
+            else:
+                dict_entity['score'] = round(ttp_score_sum / measured_techniques, 2)
+
+            software_helper.append(dict_entity)
+            attack_software.insert_one(dict_entity)
+
+        for entity in attack_collection["tools"]:
+            dict_entity = dict(entity)
+            sw_id = dict_entity['id']
+            
+            techniques = []
+            measured_techniques = 0
+            ttp_score_sum = 0
+
+            for relationship in attack_collection["relationships"]:
+                dict_rel = dict(relationship)
+
+                if dict_rel['source_ref'] == sw_id:
+                    if 'attack-pattern' in dict_rel['target_ref']:
+                        techniques.append(dict_rel['target_ref'])
+
+                elif dict_rel['target_ref'] == sw_id:
+                    if 'attack-pattern' in dict_rel['source_ref']:
+                        techniques.append(dict_rel['source_ref'])
+
+
+            for ttp_id in techniques:
+                for technique in technique_helper:
+                    if technique['id'] == ttp_id and technique['level'] != "Unknown":
+                        measured_techniques += 1
+                        ttp_score_sum += int(technique['level'])
+
+            if measured_techniques == 0:
+                dict_entity['score'] = 'Unknown'
+            else:
+                dict_entity['score'] = round(ttp_score_sum / measured_techniques, 2)
+
+            software_helper.append(dict_entity)
+            attack_software.insert_one(dict_entity)
+
+        #TODO: model the four OWASP Parameters
+        for entity in attack_collection["groups"]:
+            dict_entity = dict(entity)
+            gr_id = dict_entity['id']
+
+            measured_techniques = 0
+            ttp_score_sum = 0
+            used_techniques = []
+
+            measured_software = 0
+            sw_score_sum = 0
+            used_software = []
+
+
+            for relationship in attack_collection["relationships"]:
+                dict_rel = dict(relationship)
+
+                if dict_rel['source_ref'] == gr_id:
+                    if 'attack-pattern' in dict_rel['target_ref']:
+                        used_techniques.append(dict_rel['target_ref'])
+
+                elif dict_rel['target_ref'] == gr_id:
+                    if 'attack-pattern' in dict_rel['source_ref']:
+                        used_techniques.append(dict_rel['source_ref'])
+
+
+            for ttp_id in used_techniques:
+                for technique in technique_helper:
+                    if technique['id'] == ttp_id and technique['level'] != "Unknown":
+                        measured_techniques += 1
+                        ttp_score_sum += float(technique['level'])
+
+            if measured_techniques == 0:
+                dict_entity['skill_level'] = 'Unknown'
+            else:
+                dict_entity['skill_level'] = float(ttp_score_sum / measured_techniques)
+
+            for relationship in attack_collection["relationships"]:
+                dict_rel = dict(relationship)
+
+                if dict_rel['source_ref'] == sw_id:
+                    if 'malware' in dict_rel['target_ref'] or 'tool' in dict_rel['target_ref']:
+                        used_software.append(dict_rel['target_ref'])
+
+                elif dict_rel['target_ref'] == sw_id:
+                    if 'malware' in dict_rel['target_ref'] or 'tool' in dict_rel['target_ref']:
+                        used_software.append(dict_rel['source_ref'])
+
+
+            for sw_id in used_software:
+                for software in software_helper:
+                    if software['id'] == sw_id and software['score'] != "Unknown":
+                        measured_software += 1
+                        sw_score_sum += float(software['score'])
+
+            if measured_software == 0:
+                dict_entity['opportunity'] = 'Unknown'
+            else:
+                dict_entity['opportunity'] = float(sw_score_sum / measured_software)
+
+            if (dict_entity['skill_level'] == "Unknown") and (dict_entity['opportunity'] != 'Unknown'):
+                dict_entity['skill_level'] = dict_entity['opportunity']
+
+            if (dict_entity['opportunity'] == "Unknown") and (dict_entity['skill_level'] != 'Unknown'):
+                dict_entity['opportunity'] = dict_entity['skill_level']
+
+            if dict_entity['opportunity'] != 'Unknown' and dict_entity['skill_level'] != 'Unknown':
+                dict_entity['skill_level'] = int(OWASP * dict_entity['skill_level'])
+                dict_entity['opportunity'] = int(OWASP * dict_entity['opportunity'])
+            
+            stix_group_id = stix_id = dict_entity['id'].split("--")[1]
+            attack_group_id = None
+            for external_reference in dict_entity['external_references']:
+                if 'attack' in external_reference['source_name']:
+                    attack_group_id = external_reference['external_id']
+                    break
             
 
-        for entity in attack["groups"]:
-            attack_groups.insert_one(dict(entity))
+            threat_actors = []
+            try:
+                misp_list = misp_threat_actor.distinct('uuid', {"meta.refs": GROUP_URL(attack_group_id)}) + misp_threat_actor.distinct('uuid', {"related.dest-uuid": stix_group_id})
+                for threat_actor in misp_list:
+                    if threat_actor not in threat_actors:
+                        threat_actors.append(threat_actor)
+            except:
+                pass
 
-        for entity in attack["malware"]:
-            attack_software.insert_one(dict(entity))
+            motive_list = []
+            size_list = []
 
-        for entity in attack["tools"]:
-            attack_software.insert_one(dict(entity))
+            for threat_actor in threat_actors:
+                threat_actor_list = misp_threat_actor.find({'uuid':threat_actor})
+                for threat_actor_dict in threat_actor_list:
 
-        for entity in attack["mitigations"]:
+                    motive_list.append(int(threat_actor_dict['motive']))
+                    size_list.append(int(threat_actor_dict['size']))
+            
+            dict_entity['motive'] = str(sum(motive_list))
+            if dict_entity['motive'] == '0':
+                dict_entity['motive'] = 'Unknown'
+
+            dict_entity['size'] = str(sum(size_list))
+            if dict_entity['size'] == '0':
+                dict_entity['size'] = 'Unknown'
+
+            attack_groups.insert_one(dict_entity)
+
+
+        for entity in attack_collection["mitigations"]:
             attack_mitigations.insert_one(dict(entity))
 
         return
-        
+     
     elif collection == "MISP":
         with open(os.path.join(MISP_PATH, MISP_THREAT_ACTOR), 'r', encoding="UTF-8") as misp_file:
             threat_actors = json.loads(misp_file.read())
+
             for threat_actor in threat_actors['values']:
-                misp_threat_actor.insert_one(dict(threat_actor))
+                dict_threat_actor = threat_actor_category(dict(threat_actor))
+                misp_threat_actor.insert_one(dict_threat_actor)
+
             misp_file.close()
     
     else:
@@ -202,7 +379,7 @@ if "cti" not in cti_client.list_database_names():
     for feed in FEEDS:
         cti_create(feed, cti_client)
 
-elif sys.argv[1] == '-U' or sys.argv[1] == '--update':
+elif len(sys.argv) > 1 and (sys.argv[1] == '-U' or sys.argv[1] == '--update'):
     print('Updating CTI Database instance...')
     remove_feeds()
     cti_client.drop_database('cti')
@@ -210,13 +387,15 @@ elif sys.argv[1] == '-U' or sys.argv[1] == '--update':
     for feed in FEEDS:
         cti_create(feed, cti_client)
 
-elif sys.argv[1] == '-W' or sys.argv[1] == '--wipe':
+elif len(sys.argv) > 1 and (sys.argv[1] == '-W' or sys.argv[1] == '--wipe'):
     print('Wiping CTI Database instance...')
     remove_feeds()
     cti_client.drop_database('cti')
     print("Done.\n")
     sys.exit(0)
 
+else:
+    pass
 
 cti = cti_client['cti']
 

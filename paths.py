@@ -4,7 +4,7 @@ import re
 from shutil import rmtree
 from taxii2client import Server
 
-FEEDS = ["CVE", "CWE", "CAPEC", "ATTACK", "MISP"]
+FEEDS = ["CVE", "CWE", "CAPEC", "MISP", "ATTACK"]
 
 MITRE_STIX = "https://cti-taxii.mitre.org/stix/collections/"
 MITRE_TAXII = Server("https://cti-taxii.mitre.org/taxii/")
