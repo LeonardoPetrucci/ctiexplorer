@@ -1,6 +1,21 @@
 from mongocti import *
 from paths import GROUP_URL
 
+def fetch(attack_entity):
+    attack_db = None
+    if "attack-pattern" in attack_entity:
+        attack_db = techniques_db
+    elif "intrusion-set" in attack_entity:
+        attack_db = groups_db
+    elif "course-of-action" in attack_entity:
+        attack_db = mitigations_db
+    elif "tool" in attack_entity or "malware" in attack_entity:
+        attack_db = software_db
+
+    search_result = attack_db.find({'id':attack_entity})
+    for entity in search_result:
+        return entity
+
 def relationship_with(attack_entity, entity_type=None):
     try:
         partners = []

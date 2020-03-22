@@ -17,12 +17,12 @@ default_password = "cti"
 def cti_graph(scenario, graph_uri=default_uri, graph_user=default_user, graph_password=default_password):
     cve_list = scenario['cve']
     capec_list = scenario['capec']
-    preliminary_technique_list = scenario['preliminary_technique']
+    technique_list = scenario['technique']
     software_list = scenario['software']
-    #full_technique_list = scenario['technique']
     group_list = scenario['group']
 
     g = Graph(uri=graph_uri, user=graph_user, password=graph_password)
+
     matcher = NodeMatcher(g)
     g.delete_all()
     tx = g.begin()
@@ -57,11 +57,11 @@ def cti_graph(scenario, graph_uri=default_uri, graph_user=default_user, graph_pa
 
     for capec_id in capec_list:
         capec_node = matcher.match("CAPEC").where("_.name =~ '" + ('CAPEC-' + str(capec_id)) + "'").first()
-        for preliminary_technique in capec.attack_technique(capec_id):
-            for software in attack.relationship_with(preliminary_technique, "software"):
+        for technique in capec.attack_technique(capec_id):
+            for software in attack.relationship_with(technique, "software"):
                 software_node = matcher.match("SOFTWARE").where("_.name =~ '" + attack.attack_id(software) + "'").first()
-                preliminary_technique_software = Relationship(capec_node, attack.attack_id(preliminary_technique), software_node)
-                tx.merge(preliminary_technique_software)
+                technique_software = Relationship(capec_node, attack.attack_id(technique), software_node)
+                tx.merge(technique_software)
 
     for software in software_list:
         software_node = matcher.match("SOFTWARE").where("_.name =~ '" + attack.attack_id(software) + "'").first()
@@ -84,13 +84,13 @@ def generate_scenario(cve_list):
         capec_list += cve.capec(cve_id)
     capec_list = list(dict.fromkeys(capec_list))
     
-    preliminary_technique_list = []
+    technique_list = []
     for capec_id in capec_list:
-        preliminary_technique_list += capec.attack_technique(capec_id)
-    preliminary_technique_list = list(dict.fromkeys(preliminary_technique_list))
+        technique_list += capec.attack_technique(capec_id)
+    technique_list = list(dict.fromkeys(technique_list))
 
     software_list = []
-    for technique in preliminary_technique_list:
+    for technique in technique_list:
         software_list += attack.relationship_with(technique, "software")
     software_list = list(dict.fromkeys(software_list))
 
@@ -101,12 +101,73 @@ def generate_scenario(cve_list):
 
     scenario['cve'] = cve_list
     scenario['capec'] = capec_list
-    scenario['preliminary_technique'] = preliminary_technique_list
+    scenario['technique'] = technique_list
     scenario['software'] = software_list
     scenario['group'] = group_list
 
     return scenario
 
+def owasp_scenario(scenario):
+    owasp = {}
+
+    owasp['skill_level'] = 'Unknown'
+    owasp['motive'] = 'Unknown'
+    owasp['opportunity'] = 'Unknown'
+    owasp['size'] = 'Unknown'
+
+
+    skill_level_sum = 0
+    skill_level_entities = 0
+
+    for technique in scenario['technique']:
+        level = attack.fetch(technique)['level']
+        if level != 'Unknown':
+            skill_level_entities += 1
+            skill_level_sum += int(level)
+    
+    if skill_level_entities != 0:
+        owasp['skill_level'] = int(skill_level_sum / skill_level_entities)
+    
+
+    opportunity_sum = 0
+    opportunity_entities = 0
+
+    for software in scenario['software']:
+        score = attack.fetch(software)['score']
+        if score != 'Unknown':
+
+            opportunity_entities += 1
+            opportunity_sum += int(score)
+
+    if opportunity_entities != 0:
+        owasp['opportunity'] = int(opportunity_sum / opportunity_entities)
+    
+    group_count = 0
+    motive_sum = 0
+    size_sum = 0
+
+    for group in scenario['group']:
+        motive = attack.fetch(group)['motive']
+        size = attack.fetch(group)['size']
+        if motive != 'Unknown' and size != 'Unknown':
+
+            software_group = attack.relationship_with(group, 'software')
+            used_sw = 0
+            total_sw = len(software_group)
+            for software in software_group:
+                if software in scenario['software']:
+                    used_sw += 1
+
+            weight = float(used_sw / total_sw)
+            group_count += weight
+            motive_sum += float(motive) * weight
+            size_sum += float(size) * weight
+    
+    if group_count != 0:
+        owasp['motive'] = int(motive_sum / group_count)
+        owasp['size'] = int(motive_sum / group_count)
+
+    return owasp
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
@@ -115,6 +176,7 @@ if __name__ == "__main__":
     
     cve_list = sys.argv[1:]
     scenario = generate_scenario(cve_list)
-    cti_graph(scenario) 
+    cti_graph(scenario)
+    print(owasp_scenario(scenario))
     sys.exit(0)
 

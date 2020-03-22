@@ -238,7 +238,7 @@ def cti_create(collection, client):
             software_helper.append(dict_entity)
             attack_software.insert_one(dict_entity)
 
-        #TODO: model the four OWASP Parameters
+
         for entity in attack_collection["groups"]:
             dict_entity = dict(entity)
             gr_id = dict_entity['id']
