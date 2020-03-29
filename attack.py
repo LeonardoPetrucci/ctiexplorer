@@ -123,13 +123,13 @@ def permissions(attack_technique):
 
 def description(attack_technique):
     try:
-        return techniques_db.distinct('description', {'id':attack_technique})
+        return techniques_db.distinct('description', {'id':attack_technique})[0]
     except:
         return []
 
 def name(attack_technique):
     try:
-        return techniques_db.distinct('name', {'id':attack_technique})
+        return techniques_db.distinct('name', {'id':attack_technique})[0]
     except:
         return []        
 

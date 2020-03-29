@@ -6,15 +6,21 @@ from paths import CIRCL_API
 def cwe(cve):
     cwe_list = []
     
-    cwe_list.append(json.loads(requests.get(CIRCL_API + "cve/" + cve).text)['cwe'].split("-")[1])
+    try:
+        cwe_list.append(json.loads(requests.get(CIRCL_API + "cve/" + cve).text)['cwe'].split("-")[1])
+    except:
+        print('CIRCL: ' + str(cve) + ' has no related CWE IDs.')
     
     return cwe_list
 
 def capec(cve):
     capec_list = []
-    
-    attack_patterns = json.loads(requests.get(CIRCL_API + "cve/" + cve).text)['capec']
-
+    try:
+        attack_patterns = json.loads(requests.get(CIRCL_API + "cve/" + cve).text)['capec']
+    except:
+        print('CIRCL: ' + str(cve) + ' has no related CAPEC IDs.')
+        return capec_list
+        
     for attack_pattern in attack_patterns:
         capec_id = attack_pattern['id']
         capec_list.append(capec_id)
