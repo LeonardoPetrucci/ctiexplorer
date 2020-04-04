@@ -7,6 +7,7 @@ import xmltodict
 import sys
 import datetime
 
+from math import modf
 from paths import *
 from collections import OrderedDict
 from stix2 import TAXIICollectionSource, Filter, AttackPattern, parse
@@ -305,16 +306,16 @@ def cti_create(collection, client):
                 dict_entity['opportunity'] = dict_entity['skill_level']
 
             if dict_entity['opportunity'] != 'Unknown' and dict_entity['skill_level'] != 'Unknown':
-                dict_entity['skill_level'] = int(OWASP * dict_entity['skill_level'])
-                dict_entity['opportunity'] = int(OWASP * dict_entity['opportunity'])
+                dict_entity['skill_level'] = int(modf(OWASP * dict_entity['skill_level'])[1])
+                dict_entity['opportunity'] = int(modf(OWASP * dict_entity['opportunity'])[1])
             
-            stix_group_id = stix_id = dict_entity['id'].split("--")[1]
+            stix_group_id = dict_entity['id'].split("--")[1]
             attack_group_id = None
             for external_reference in dict_entity['external_references']:
                 if 'attack' in external_reference['source_name']:
                     attack_group_id = external_reference['external_id']
                     break
-            
+
 
             threat_actors = []
             try:
@@ -335,11 +336,18 @@ def cti_create(collection, client):
                     motive_list.append(int(threat_actor_dict['motive']))
                     size_list.append(int(threat_actor_dict['size']))
             
-            dict_entity['motive'] = str(sum(motive_list))
+            if len(motive_list) > 0:
+                dict_entity['motive'] = str(sum(motive_list)/len(motive_list))
+            else: 
+                dict_entity['motive'] = '0'
             if dict_entity['motive'] == '0':
                 dict_entity['motive'] = 'Unknown'
 
-            dict_entity['size'] = str(sum(size_list))
+            
+            if len(size_list) > 0:
+                dict_entity['size'] = str(sum(size_list)/len(size_list))
+            else: 
+                dict_entity['size'] = '0'
             if dict_entity['size'] == '0':
                 dict_entity['size'] = 'Unknown'
 

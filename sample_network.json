@@ -1,0 +1,16 @@
+{
+    "192.168.1.54": {
+        "operating_system": "Windows",
+        "cve_list": [
+            "CVE-2019-12258",
+            "CVE-2015-2545"
+        ] 
+    },
+    "192.168.1.2": {
+        "operating_system": "Linux",
+        "cve_list": [
+            "CVE-2019-12820",
+            "CVE-2019-12819"
+        ]
+    }
+}
