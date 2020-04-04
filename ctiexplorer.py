@@ -39,20 +39,37 @@ def cti_mitigations_graph(scenario, graph_uri=default_uri, graph_user=default_us
         tx.create(host_node)
     
     for cve_id in cve_list:
-        cve_node = Node("CVE", name=cve_id)
+        cve_node = Node("CVE", name=cve_id, 
+                               cwe=str(cve.cwe(cve_id)), 
+                               score=str(cve.score(cve_id)))
         tx.create(cve_node)
     
     for capec_id in capec_list:
-        capec_node = Node("CAPEC", name=('CAPEC-' + str(capec_id)))
+        capec_node = Node("CAPEC", name=('CAPEC-' + str(capec_id)), 
+                                   cwe=str(capec.cwe(capec_id)),
+                                   likelihood=str(capec.likelihood(capec_id)),
+                                   severity=str(capec.severity(capec_id)),
+                                   prerequisites=str(capec.prerequisites(capec_id)),
+                                   skill=str(capec.skill(capec_id)),
+                                   consequences=str(capec.consequences(capec_id)),
+                                   resources=str(capec.resources(capec_id)))
         tx.create(capec_node)
 
     for technique in technique_list:
-        technique_node = Node("TECHNIQUE", name=attack.attack_id(technique))
+        technique_node = Node("TECHNIQUE", name=attack.attack_id(technique),
+                                           extended_name=str(attack.name(technique)),
+                                           platforms=str(attack.technique_platforms(technique)),
+                                           permissions=str(attack.permissions(technique)),
+                                           description=str(attack.description(technique)),
+                                           datasource=str(attack.data_sources(technique)),
+                                           kill_chain_phase=str(attack.kill_chain_phases(technique)))
         tx.create(technique_node)
 
     for mitigation in mitigation_list:
         if attack.attack_id(mitigation)[0] == 'M':
-            mitigation_node = Node("MITIGATION", name=attack.attack_id(mitigation))
+            mitigation_node = Node("MITIGATION", name=attack.attack_id(mitigation),
+                                                 extended_name=str(attack.mitigation_name(mitigation)),
+                                                 description=str(attack.mitigation_description(mitigation)))
             tx.create(mitigation_node)
 
     tx.commit()
@@ -120,23 +137,45 @@ def cti_groups_graph(scenario, graph_uri=default_uri, graph_user=default_user, g
         tx.create(host_node)
 
     for cve_id in cve_list:
-        cve_node = Node("CVE", name=cve_id)
+        cve_node = Node("CVE", name=cve_id, 
+                               cwe=str(cve.cwe(cve_id)), 
+                               score=str(cve.score(cve_id)))
         tx.create(cve_node)
     
     for capec_id in capec_list:
-        capec_node = Node("CAPEC", name=('CAPEC-' + str(capec_id)))
+        capec_node = Node("CAPEC", name=('CAPEC-' + str(capec_id)), 
+                                   cwe=str(capec.cwe(capec_id)),
+                                   likelihood=str(capec.likelihood(capec_id)),
+                                   severity=str(capec.severity(capec_id)),
+                                   prerequisites=str(capec.prerequisites(capec_id)),
+                                   skill=str(capec.skill(capec_id)),
+                                   consequences=str(capec.consequences(capec_id)),
+                                   resources=str(capec.resources(capec_id)))
         tx.create(capec_node)
 
     for technique in technique_list:
-        technique_node = Node("TECHNIQUE", name=attack.attack_id(technique))
+        technique_node = Node("TECHNIQUE", name=attack.attack_id(technique),
+                                           extended_name=str(attack.name(technique)),
+                                           platforms=str(attack.technique_platforms(technique)),
+                                           permissions=str(attack.permissions(technique)),
+                                           description=str(attack.description(technique)),
+                                           datasource=str(attack.data_sources(technique)),
+                                           kill_chain_phase=str(attack.kill_chain_phases(technique)),
+                                           impact=str(attack.technique_impact(technique)))
         tx.create(technique_node)
 
     for software in software_list:
-        sofware_node = Node("SOFTWARE", name=attack.attack_id(software))
+        sofware_node = Node("SOFTWARE", name=attack.attack_id(software),
+                                        extended_name=str(attack.software_name(software)),
+                                        description=str(attack.software_description(software)),
+                                        platforms=str(attack.software_platforms(software)),
+                                        software_type=str(attack.software_type(software)))
         tx.create(sofware_node)
 
     for group in group_list:
-        group_node = Node("GROUP", name=attack.attack_id(group))
+        group_node = Node("GROUP", name=attack.attack_id(group),
+                                   extended_name=str(attack.group_name(group)),
+                                   description=str(attack.group_description(group)))
         tx.create(group_node)
 
     tx.commit()
@@ -390,7 +429,7 @@ if __name__ == "__main__":
                 if len(host_cve_list) != 0:
                     host_os = network[host]['operating_system']
                     print('This Host runs ' + host_os + '\n')
-                    
+
                     cve_list += host_cve_list
                     os_versions.append(host_os)
                     cve_scenario = host_scenario(host_cve_list, host_os)

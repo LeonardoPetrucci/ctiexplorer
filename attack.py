@@ -109,9 +109,33 @@ def technique_platforms(attack_technique):
     except:
         return []
 
+def technique_impact(attack_technique):
+    try:
+        return techniques_db.distinct('impact', {'id':attack_technique})
+    except:
+        return []
+
 def software_platforms(attack_software):
     try:
         return software_db.distinct('x_mitre_platforms', {'id':attack_software})
+    except:
+        return []
+
+def software_type(attack_software):
+    try:
+        return software_db.distinct('type', {'id':attack_software})
+    except:
+        return []
+
+def software_name(attack_software):
+    try:
+        return software_db.distinct('name', {'id':attack_software})
+    except:
+        return []
+
+def software_description(attack_software):
+    try:
+        return software_db.distinct('description', {'id':attack_software})
     except:
         return []
 
@@ -139,9 +163,35 @@ def data_sources(attack_technique):
     except:
         return []
 
+
+
 def kill_chain_phases(attack_technique):
     try:
         return techniques_db.distinct('kill_chain_phases.phase_name', {'id':attack_technique})
+    except:
+        return []
+
+def group_name(attack_group):
+    try:
+        return groups_db.distinct('name', {'id':attack_group})
+    except:
+        return []
+
+def group_description(attack_group):
+    try:
+        return groups_db.distinct('description', {'id':attack_group})
+    except:
+        return []
+
+def mitigation_name(attack_mitigation):
+    try:
+        return mitigations_db.distinct('name', {'id':attack_mitigation})
+    except:
+        return []
+
+def mitigation_description(attack_mitigation):
+    try:
+        return mitigations_db.distinct('description', {'id':attack_mitigation})
     except:
         return []
 
