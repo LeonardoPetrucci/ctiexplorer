@@ -253,7 +253,7 @@ def owasp_scenario(scenario):
     
     if 'Unknown' in owasp.values():
         print('Missing some information related to the selected CVE.\n')
-        return {}
+        return None
 
     return owasp
 
@@ -311,33 +311,37 @@ if __name__ == "__main__":
             print("No CVE list to analyze. Please insert at least one CVE ID.\n")
             sys.exit(0)
 
-        scenario = generate_scenario(cve_list, os_version)
-        
-        owasp_threat_agent = owasp_scenario(scenario)
-        if 'Unknown' in owasp_threat_agent.values():
-            print('Cannot define Threat Actor factors for this scenario.\n')
-        else:
-            skill_level = str(owasp_threat_agent['skill_level'])
-            motive = str(owasp_threat_agent['motive'])
-            opportunity = str(owasp_threat_agent['opportunity'])
-            size = str(owasp_threat_agent['size'])
+        cve_scenario = {}
+        for cve_id in cve_list:
+            single_cve = []
+            single_cve.append(cve_id)
+            cve_scenario[cve_id] = generate_scenario(single_cve, os_version)
 
-            print('Possible Threat Agent defined.')
-            print('Skill Level: ' + skill_level)
-            print('Motive: ' + motive)
-            print('Opportunity: ' + opportunity)
-            print('Size: ' + size)
-            print('\nPlease continue your Risk Rating process by clicking the link below.')
-            print('https://owasp-risk-rating.com/?vector=(SL:' + skill_level + '/M:' + motive + '/O:' + opportunity + '/S:' + size + ')\n')
+        global_scenario = generate_scenario(cve_list, os_version)
+        
+        for cve_id in cve_scenario.keys():
+            print(cve_id)
+            scenario = cve_scenario[cve_id]
+            owasp_threat_agent = owasp_scenario(scenario)
+            if owasp_threat_agent == None:
+                print('Cannot define Threat Actor factors for this scenario.\n')
+            else:
+                skill_level = str(owasp_threat_agent['skill_level'])
+                motive = str(owasp_threat_agent['motive'])
+                opportunity = str(owasp_threat_agent['opportunity'])
+                size = str(owasp_threat_agent['size'])
+
+                print('Possible Threat Agent defined.')
+                print('\nPlease continue your Risk Rating process by following the link below.')
+                print('https://owasp-risk-rating.com/?vector=(SL:' + skill_level + '/M:' + motive + '/O:' + opportunity + '/S:' + size + ')\n')
 
         if option == 'M':
-            cti_mitigations_graph(scenario)
+            cti_mitigations_graph(global_scenario)
         else:
-            cti_groups_graph(scenario) 
+            cti_groups_graph(global_scenario) 
         
-            
             if option == 'R':
-                techniques = scenario['technique']
+                techniques = global_scenario['technique']
                 if len(techniques) > 0:
                     run_techniques(techniques)
                 else:
