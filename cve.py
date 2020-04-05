@@ -27,14 +27,33 @@ def capec(cve):
     
     return capec_list
 
-def score(cve, version=2):
+def cvss_severity(cve):
     try:
-        if version == 3:
-            cvss_3 = cve_db.distinct("impact.baseMetricV3", {"cve.CVE_data_meta.ID": cve})
-            return cvss_3[0]
-        else:    
-            cvss_2 = cve_db.distinct("impact.baseMetricV2", {"cve.CVE_data_meta.ID": cve})
-            return cvss_2[0]
+        return cve_db.distinct("impact.baseMetricV2.severity", {"cve.CVE_data_meta.ID": cve})
     except:
-        return {}
+        return []
 
+def cvss_exscore(cve):
+    try:
+        return cve_db.distinct("impact.baseMetricV2.exploitabilityScore", {"cve.CVE_data_meta.ID": cve})
+    except:
+        return []
+
+def cvss_impactscore(cve):
+    try:
+        return cve_db.distinct("impact.baseMetricV2.impactScore", {"cve.CVE_data_meta.ID": cve})
+    except:
+        return []
+
+def cvss_vector(cve):
+    try:
+        return cve_db.distinct("impact.baseMetricV2.cvssV2.vectorString", {"cve.CVE_data_meta.ID": cve})
+    except:
+        return []
+
+def cvss_basescore(cve):
+    
+    try:
+        return cve_db.distinct("impact.baseMetricV2.cvssV2.baseScore", {"cve.CVE_data_meta.ID": cve})
+    except:
+        return []
