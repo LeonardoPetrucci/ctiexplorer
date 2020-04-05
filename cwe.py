@@ -7,7 +7,7 @@ def capec(cwe):
         return []
 
 def impact(cwe):
-        try:
+    try:
         return cwe_db.distinct("Common_Consequences.Consequence.Impact", {"ID":cwe})
     except:
         return []

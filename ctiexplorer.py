@@ -14,7 +14,6 @@ from py2neo import Graph, Node, Relationship, NodeMatcher
 from mongocti import *
 
 
-
 default_uri = "bolt://localhost:7687"
 default_user = "neo4j"
 default_password = "cti"
