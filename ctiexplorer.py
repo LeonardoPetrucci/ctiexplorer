@@ -82,37 +82,35 @@ def cti_mitigations_graph(scenario, graph_uri=default_uri, graph_user=default_us
         if network == None:
             for cve_id in cve_list:
                 cve_node = matcher.match("CVE").where("_.name =~ '" + str(cve_id) + "'").first()
-                host_cve = Relationship(host_node, "RELATED", cve_node)
-                tx.merge(host_cve, "RELATED", "name")
+                host_cve = Relationship(host_node, "PRESENT", cve_node)
+                tx.merge(host_cve, "PRESENT", "name")
         else:
             for cve_id in network[host]['cve_list']:
                 cve_node = matcher.match("CVE").where("_.name =~ '" + str(cve_id) + "'").first()
-                host_cve = Relationship(host_node, "RELATED", cve_node)
-                tx.merge(host_cve, "RELATED", "name")
+                host_cve = Relationship(host_node, "PRESENT", cve_node)
+                tx.merge(host_cve, "PRESENT", "name")
 
     for cve_id in cve_list:
         cve_node = matcher.match("CVE").where("_.name =~ '" + cve_id + "'").first()
         for capec_id in cve.capec(cve_id):
             capec_node = matcher.match("CAPEC").where("_.name =~ '" + ('CAPEC-' + str(capec_id)) + "'").first()
-            cve_capec = Relationship(cve_node, "ENABLES", capec_node)
-            capec_cve = Relationship(capec_node, "EXPLOITS", cve_node)
-            tx.merge(cve_capec, "RELATED", "name")
-            tx.merge(capec_cve, "RELATED", "name")
+            cve_capec = Relationship(cve_node, "EXPLOITED", capec_node)
+            tx.merge(cve_capec, "EXPLOITED", "name")
 
     for capec_id in capec_list:
         capec_node = matcher.match("CAPEC").where("_.name =~ '" + ('CAPEC-' + str(capec_id)) + "'").first()
         for technique in capec.attack_technique(capec_id):
             if technique in technique_list:
                 technique_node = matcher.match("TECHNIQUE").where("_.name =~ '" + attack.attack_id(technique) + "'").first()
-                capec_technique = Relationship(capec_node, "RELATED", technique_node)
-                tx.merge(capec_technique, "RELATED", "name")
+                capec_technique = Relationship(capec_node, "IMPLEMENTED", technique_node)
+                tx.merge(capec_technique, "IMPLEMENTED", "name")
     
     for technique in technique_list:
         technique_node = matcher.match("TECHNIQUE").where("_.name =~ '" + attack.attack_id(technique) + "'").first()
         for mitigation in attack.relationship_with(technique, "course-of-action"):
             if attack.attack_id(mitigation)[0] == 'M':
-                mitigation_node = matcher.match("MITIGATION").where("_.name =~ '" + attack.attack_id(mitigation) + "'").first()
-                technique_mitigation = Relationship(technique_node, "RELATED", mitigation_node)
+                mitigation_node = matcher.match("MITIGATED").where("_.name =~ '" + attack.attack_id(mitigation) + "'").first()
+                technique_mitigation = Relationship(technique_node, "MITIGATED", mitigation_node)
                 tx.merge(technique_mitigation)
     
     tx.commit()
@@ -191,45 +189,43 @@ def cti_groups_graph(scenario, graph_uri=default_uri, graph_user=default_user, g
         if network == None:
             for cve_id in cve_list:
                 cve_node = matcher.match("CVE").where("_.name =~ '" + str(cve_id) + "'").first()
-                host_cve = Relationship(host_node, "RELATED", cve_node)
-                tx.merge(host_cve, "RELATED", "name")
+                host_cve = Relationship(host_node, "PRESENT", cve_node)
+                tx.merge(host_cve, "PRESENT", "name")
         else:
             for cve_id in network[host]['cve_list']:
                 cve_node = matcher.match("CVE").where("_.name =~ '" + str(cve_id) + "'").first()
-                host_cve = Relationship(host_node, "RELATED", cve_node)
-                tx.merge(host_cve, "RELATED", "name")
+                host_cve = Relationship(host_node, "PRESENT", cve_node)
+                tx.merge(host_cve, "PRESENT", "name")
 
     for cve_id in cve_list:
         cve_node = matcher.match("CVE").where("_.name =~ '" + cve_id + "'").first()
         for capec_id in cve.capec(cve_id):
             capec_node = matcher.match("CAPEC").where("_.name =~ '" + ('CAPEC-' + str(capec_id)) + "'").first()
-            cve_capec = Relationship(cve_node, "ENABLES", capec_node)
-            capec_cve = Relationship(capec_node, "EXPLOITS", cve_node)
-            tx.merge(cve_capec, "RELATED", "name")
-            tx.merge(capec_cve, "RELATED", "name")
+            cve_capec = Relationship(cve_node, "EXPLOITED", capec_node)
+            tx.merge(cve_capec, "EXPLOITED", "name")
 
     for capec_id in capec_list:
         capec_node = matcher.match("CAPEC").where("_.name =~ '" + ('CAPEC-' + str(capec_id)) + "'").first()
         for technique in capec.attack_technique(capec_id):
             if technique in technique_list:
                 technique_node = matcher.match("TECHNIQUE").where("_.name =~ '" + attack.attack_id(technique) + "'").first()
-                capec_technique = Relationship(capec_node, "RELATED", technique_node)
-                tx.merge(capec_technique, "RELATED", "name")
+                capec_technique = Relationship(capec_node, "IMPLEMENTED", technique_node)
+                tx.merge(capec_technique, "IMPLEMENTED", "name")
     
     for technique in technique_list:
         technique_node = matcher.match("TECHNIQUE").where("_.name =~ '" + attack.attack_id(technique) + "'").first()
         for software in attack.relationship_with(technique, "software"):
             if software in software_list:
                 software_node = matcher.match("SOFTWARE").where("_.name =~ '" + attack.attack_id(software) + "'").first()
-                technique_software = Relationship(technique_node, "RELATED", software_node)
-                tx.merge(technique_software)
+                technique_software = Relationship(technique_node, "ENABLED", software_node)
+                tx.merge(technique_software, "ENABLED", "name")
 
     for software in software_list:
         software_node = matcher.match("SOFTWARE").where("_.name =~ '" + attack.attack_id(software) + "'").first()
         for group in attack.relationship_with(software, "intrusion-set"):
             group_node = matcher.match("GROUP").where("_.name =~ '" + attack.attack_id(group) + "'").first()
-            software_group = Relationship(software_node, "RELATED", group_node)
-            tx.merge(software_group)
+            software_group = Relationship(software_node, "USED", group_node)
+            tx.merge(software_group, "USED", "name")
 
     tx.commit()
     return
